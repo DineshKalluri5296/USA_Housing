@@ -5,6 +5,7 @@ import uvicorn
 import joblib
 import os
 import time
+import mlflow
 
 # Prometheus
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
