@@ -30,18 +30,18 @@ pipeline {
             }
         }
 
-        // stage('SonarQube Analysis') {
-        //     steps {
-        //         withSonarQubeEnv('SonarQube') {
-        //             sh """
-        //             ${tool 'SonarScanner'}/bin/sonar-scanner \
-        //             -Dsonar.projectKey=weather-prediction \
-        //             -Dsonar.sources=. \
-        //             -Dsonar.python.version=3
-        //             """
-        //         }
-        //     }
-        // }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                    ${tool 'SonarScanner'}/bin/sonar-scanner \
+                    -Dsonar.projectKey=usa \
+                    -Dsonar.sources=. \
+                    -Dsonar.python.version=3
+                    """
+                }
+            }
+        }
 
         stage('Train Model + Upload to S3 (Only First Run)') {
             steps {
