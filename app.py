@@ -37,12 +37,12 @@ model_accuracy = Gauge(
     "model_accuracy",
     "Model accuracy"
 )
-mlflow.set_tracking_uri("http://54.165.99.115:5000")  # <-- your MLflow server
-mlflow.set_experiment("Seattle_weather_prediction_FIXED_20261")
+mlflow.set_tracking_uri("http://3.92.139.221:5000")  # <-- your MLflow server
+mlflow.set_experiment("USA_Housing_price_Analysis")
 # -----------------------------
 # S3 Config
 # -----------------------------
-BUCKET_NAME = "seattle-ml-app"
+BUCKET_NAME = "USA-ml-app"
 MODEL_KEY = "models/latest/model.pkl"
 LOCAL_MODEL_PATH = "model.pkl"
 
