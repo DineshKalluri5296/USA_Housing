@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION = "us-east-1"
-        ECR_REPO = "seattle-ml-app"
+        ECR_REPO = "usa-ml-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
         ACCOUNT_ID = "440977420038"
         ECR_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -16,7 +16,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     credentialsId: 'github-credentials',
-                    url: 'https://github.com/DineshKalluri5296/weather_prediction.git'
+                    url: 'https://github.com/DineshKalluri5296/USA_Housing.git'
             }
         }
 
@@ -30,18 +30,18 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh """
-                    ${tool 'SonarScanner'}/bin/sonar-scanner \
-                    -Dsonar.projectKey=weather-prediction \
-                    -Dsonar.sources=. \
-                    -Dsonar.python.version=3
-                    """
-                }
-            }
-        }
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         withSonarQubeEnv('SonarQube') {
+        //             sh """
+        //             ${tool 'SonarScanner'}/bin/sonar-scanner \
+        //             -Dsonar.projectKey=weather-prediction \
+        //             -Dsonar.sources=. \
+        //             -Dsonar.python.version=3
+        //             """
+        //         }
+        //     }
+        // }
 
         stage('Train Model + Upload to S3 (Only First Run)') {
             steps {
@@ -51,7 +51,7 @@ pipeline {
                     sh '''
                     set +e
 
-                    MODEL_PATH="s3://seattle-ml-app/models/latest/model.pkl"
+                    MODEL_PATH="s3://usa-ml-app1/models/latest/model.pkl"
 
                     echo "🔍 Checking if model exists in S3..."
 
@@ -62,7 +62,7 @@ pipeline {
                     else
                         echo "🚀 Training model..."
 
-                        python3 model.py
+                        python3 train.py
 
                         echo "📦 Uploading model to S3..."
 
@@ -112,9 +112,9 @@ pipeline {
         stage('Deploy FastAPI Container') {
             steps {
                 sh '''
-                docker rm -f seattle-container || true
+                docker rm -f usa-container || true
                 docker run -d \
-                  --name seattle-container \
+                  --name usa-container \
                   --network monitoring-network \
                   -p 8000:8000 \
                   ${FULL_IMAGE_NAME}
