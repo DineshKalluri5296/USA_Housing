@@ -39,7 +39,7 @@ model_accuracy = Gauge(
     "Model accuracy"
 )
 mlflow.set_tracking_uri("http://54.208.120.4:5000")  # <-- your MLflow server
-mlflow.set_experiment("USA_Housing_price_Analysis")
+mlflow.set_experiment("USA_Housing_price_Analysis1")
 # -----------------------------
 # S3 Config
 # -----------------------------
