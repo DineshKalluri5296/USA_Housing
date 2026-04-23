@@ -34,12 +34,18 @@ preprocess_time = Histogram(
     "Preprocessing time"
 )
 
-model_accuracy = Gauge(
-    "model_accuracy",
-    "Model accuracy"
-)
-mlflow.set_tracking_uri("http://54.208.120.4:5000")  # <-- your MLflow server
+# ✅ FIX: Add missing ML metrics
+model_r2 = Gauge("model_r2_score", "R2 Score")
+model_mae = Gauge("model_mae", "Mean Absolute Error")
+model_mse = Gauge("model_mse", "Mean Squared Error")
+model_rmse = Gauge("model_rmse", "Root Mean Squared Error")
+
+# -----------------------------
+# MLflow Config
+# -----------------------------
+mlflow.set_tracking_uri("http://54.208.120.4:5000")
 mlflow.set_experiment("USA_Housing_price_Analysis1")
+
 # -----------------------------
 # S3 Config
 # -----------------------------
@@ -51,7 +57,6 @@ app = FastAPI(title="USA Housing Price Prediction API")
 
 model = None
 
-# Feature order MUST match training
 FEATURES = [
     "Avg_Area_Income",
     "Avg_Area_House_Age",
@@ -61,7 +66,7 @@ FEATURES = [
 ]
 
 # -----------------------------
-# Download Model (with retry)
+# Download Model
 # -----------------------------
 def download_model():
     s3 = boto3.client("s3")
@@ -90,16 +95,24 @@ def load_model():
 
     model = joblib.load(LOCAL_MODEL_PATH)
 
-    # Warm-up (important for latency)
+    # Warm-up
     model.predict([[0, 0, 0, 0, 0]])
 
-    # Set model accuracy (replace with real value if available)
-    model_accuracy.set(0.91)
+    # ✅ Set ML metrics (static for now)
+    r2 = 0.91
+    mae = 80879.0972348982
+    mse = 10089009300.894518
+    rmse = mse ** 0.5
 
-    print("Model loaded and warmed up successfully")
+    model_r2.set(r2)
+    model_mae.set(mae)
+    model_mse.set(mse)
+    model_rmse.set(rmse)
+
+    print("Model loaded + metrics initialized")
 
 # -----------------------------
-# Input Schema (FIXED)
+# Input Schema
 # -----------------------------
 class HousingInput(BaseModel):
     Avg_Area_Income: float
@@ -123,27 +136,17 @@ def predict(data: HousingInput):
     start_total = time.time()
 
     try:
-        # -----------------------------
         # Preprocessing
-        # -----------------------------
         start_pre = time.time()
-
         input_data = [[getattr(data, f) for f in FEATURES]]
-
         preprocess_time.observe(time.time() - start_pre)
 
-        # -----------------------------
         # Inference
-        # -----------------------------
         start_inf = time.time()
-
         prediction = model.predict(input_data)[0]
-
         inference_time.observe(time.time() - start_inf)
 
-        # -----------------------------
         # Total latency
-        # -----------------------------
         total_latency = time.time() - start_total
         prediction_latency.observe(total_latency)
 
