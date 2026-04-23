@@ -25,7 +25,15 @@ pipeline {
                 sh '''
                 python3 -m pip install --upgrade pip
                 pip3 install -r requirements.txt
-                pip3 install pytest coverage
+                pip3 install pytest pytest-cov
+                '''
+            }
+        }
+
+        stage('Run Tests & Coverage') {
+            steps {
+                sh '''
+                pytest --cov=. --cov-report=xml
                 '''
             }
         }
@@ -37,8 +45,17 @@ pipeline {
                     ${tool 'SonarScanner'}/bin/sonar-scanner \
                     -Dsonar.projectKey=usa \
                     -Dsonar.sources=. \
-                    -Dsonar.python.version=3
+                    -Dsonar.python.version=3 \
+                    -Dsonar.python.coverage.reportPaths=coverage.xml
                     """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
