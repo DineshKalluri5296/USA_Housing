@@ -14,7 +14,7 @@ from mlflow.tracking import MlflowClient
 import joblib
 
 # MLflow setup
-mlflow.set_tracking_uri("http://3.92.139.221:5000")
+mlflow.set_tracking_uri("http://54.208.120.4:5000")
 mlflow.set_experiment("USA_Housing_price_Analysis")
 
 # Load data
