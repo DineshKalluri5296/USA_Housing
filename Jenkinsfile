@@ -24,8 +24,8 @@ pipeline {
             steps {
                 sh '''
                 python3 -m pip install --upgrade pip
-                pip3 install -r requirements.txt
-                pip3 install pytest pytest-cov
+                python3 -m pip install -r requirements.txt
+                python3 -m pip install pytest pytest-cov
                 '''
             }
         }
@@ -33,7 +33,7 @@ pipeline {
         stage('Run Tests & Coverage') {
             steps {
                 sh '''
-                pytest --cov=. --cov-report=xml
+                python3 -m pytest --cov=. --cov-report=xml
                 '''
             }
         }
