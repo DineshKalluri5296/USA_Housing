@@ -46,7 +46,6 @@ pipeline {
                     -Dsonar.projectKey=usa \
                     -Dsonar.sources=. \
                     -Dsonar.python.version=3 \
-                    // -Dsonar.python.coverage.reportPaths=coverage.xml
                     """
                 }
             }
