@@ -202,7 +202,7 @@ pipeline {
         FULL_IMAGE_NAME = "${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}"
         EC2_HOSTS = "ubuntu@100.27.209.28,ubuntu@107.22.130.253"
 }
-    }
+    
 
     stages {
 
