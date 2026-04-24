@@ -189,6 +189,10 @@
 //     }
 // }
 
+
+
+
+
 //  train and deploy on specific ec2 machine
 // pipeline {
 //     agent any
@@ -365,6 +369,11 @@
 //     }
 // }
 
+
+
+
+
+//  train and deploy on multiple ec2 machines
 pipeline {
     agent any
 
