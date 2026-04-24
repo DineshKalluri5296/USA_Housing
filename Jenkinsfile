@@ -215,27 +215,18 @@ pipeline {
 
         // ✅ Better Copy (Reliable)
         stage('Copy Code to EC2') {
-            steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    echo "🧹 Cleaning EC2 folder..."
-                    ssh -o StrictHostKeyChecking=no ${EC2_HOST} "
-                        rm -rf ~/USA_Housing && mkdir -p ~/USA_Housing
-                    "
+           steps {
+               sshagent(['ec2-key']) {
+                   sh '''
+                   echo "📁 Creating directory on EC2..."
+                   ssh -o StrictHostKeyChecking=no ${EC2_HOST} "rm -rf /home/ubuntu/USA_Housing && mkdir -p /home/ubuntu/USA_Housing"
 
-                    echo "📦 Copying project..."
-                    rsync -avz --delete \
-                        --exclude='.git' \
-                        --exclude='__pycache__' \
-                        --exclude='.venv' \
-                        -e "ssh -o StrictHostKeyChecking=no" \
-                        ./ ${EC2_HOST}:~/USA_Housing/
-
-                    echo "✅ Copy completed"
+                   echo "📦 Copying files to EC2..."
+                   scp -o StrictHostKeyChecking=no -r * ${EC2_HOST}:/home/ubuntu/USA_Housing/
                     '''
-                }
-            }
         }
+    }
+}
 
         // ✅ Train on EC2 (Fixed)
         stage('Train Model on EC2') {
