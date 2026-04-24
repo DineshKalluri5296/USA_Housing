@@ -225,7 +225,7 @@ pipeline {
             }
         }
 
-        // 🔥 Train + Upload Model on EC2
+        // 🔥 Train Model on EC2
         stage('Train Model on EC2') {
             steps {
                 sshagent(['ec2-key']) {
@@ -233,10 +233,14 @@ pipeline {
                     ssh ${EC2_HOST} "
                         cd USA_Housing
 
-                        pip3 install -r requirements.txt
+                        echo '📦 Installing dependencies...'
+                        sudo apt update -y
+                        sudo apt install -y python3-pip
+
+                        pip3 install --user -r requirements.txt
 
                         echo '🔍 Checking model in S3...'
-                        aws s3 ls s3://usa-ml-app11/models/latest/model.pkl >/dev/null 2>&1
+                        aws s3 ls s3://usa-ml-app1/models/latest/model.pkl >/dev/null 2>&1
 
                         if [ $? -eq 0 ]; then
                             echo '✅ Model exists. Skipping training.'
@@ -244,8 +248,8 @@ pipeline {
                             echo '🚀 Training model...'
                             python3 train.py
 
-                            echo '📦 Uploading model...'
-                            aws s3 cp model.pkl s3://usa-ml-app11/models/latest/model.pkl
+                            echo '📦 Uploading model to S3...'
+                            aws s3 cp model.pkl s3://usa-ml-app1/models/latest/model.pkl
                         fi
                     "
                     '''
@@ -253,7 +257,7 @@ pipeline {
             }
         }
 
-        // 🔥 Build + Push from Jenkins (faster)
+        // 🔥 Build on Jenkins
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${FULL_IMAGE_NAME} .'
@@ -284,22 +288,25 @@ pipeline {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh ${EC2_HOST} "
+                        echo '🐳 Fix Docker permissions...'
+                        sudo usermod -aG docker ubuntu || true
+
                         echo '🚀 Logging into ECR...'
                         aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login --username AWS --password-stdin ${ECR_URI}
+                        sudo docker login --username AWS --password-stdin ${ECR_URI}
 
                         echo '📥 Pulling image...'
-                        docker pull ${FULL_IMAGE_NAME}
+                        sudo docker pull ${FULL_IMAGE_NAME}
 
-                        echo '🧹 Cleaning old container...'
-                        docker rm -f usa-container || true
+                        echo '🧹 Removing old container...'
+                        sudo docker rm -f usa-container || true
 
                         echo '🌐 Creating network...'
-                        docker network inspect monitoring-network >/dev/null 2>&1 || \
-                        docker network create monitoring-network
+                        sudo docker network inspect monitoring-network >/dev/null 2>&1 || \
+                        sudo docker network create monitoring-network
 
                         echo '🚀 Starting container...'
-                        docker run -d \
+                        sudo docker run -d \
                           --name usa-container \
                           --network monitoring-network \
                           -p 8000:8000 \
@@ -310,27 +317,29 @@ pipeline {
             }
         }
 
-        // 🔥 Monitoring also on EC2
+        // 🔥 Monitoring on same EC2
         stage('Deploy Monitoring (EC2)') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh ${EC2_HOST} "
-                        docker rm -f node-exporter prometheus grafana || true
+                        echo '📊 Deploying monitoring stack...'
 
-                        docker run -d \
+                        sudo docker rm -f node-exporter prometheus grafana || true
+
+                        sudo docker run -d \
                           --name node-exporter \
                           --network monitoring-network \
                           -p 9100:9100 \
                           prom/node-exporter
 
-                        docker run -d \
+                        sudo docker run -d \
                           --name prometheus \
                           --network monitoring-network \
                           -p 9090:9090 \
                           prom/prometheus
 
-                        docker run -d \
+                        sudo docker run -d \
                           --name grafana \
                           --network monitoring-network \
                           -p 3000:3000 \
