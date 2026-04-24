@@ -189,7 +189,7 @@
 //     }
 // }
 
-
+//  train and deploy on specific ec2 machine
 pipeline {
     agent any
 
