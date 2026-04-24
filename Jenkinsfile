@@ -429,7 +429,7 @@ pipeline {
                                 sudo pip3 install -r requirements.txt
 
                                 echo "🔍 Checking model in S3..."
-                                aws s3 ls s3://usa-ml-app1/models/latest/model.pkl >/dev/null 2>&1
+                                aws s3 ls s3://usa-ml-app11/models/latest/model.pkl >/dev/null 2>&1
 
                                 if [ \$? -eq 0 ]; then
                                     echo "✅ Model exists. Skipping training."
@@ -438,7 +438,7 @@ pipeline {
                                     python3 train.py
 
                                     echo "📦 Uploading model..."
-                                    aws s3 cp model.pkl s3://usa-ml-app1/models/latest/model.pkl
+                                    aws s3 cp model.pkl s3://usa-ml-app11/models/latest/model.pkl
                                 fi
                             '
                             """
