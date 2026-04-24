@@ -43,8 +43,8 @@ model_rmse = Gauge("model_rmse", "Root Mean Squared Error")
 # -----------------------------
 # MLflow Config
 # -----------------------------
-mlflow.set_tracking_uri("http://54.208.120.4:5000")
-mlflow.set_experiment("USA_Housing_price_Analysis1")
+mlflow.set_tracking_uri("http://107.22.130.253:5000")
+mlflow.set_experiment("USA_Housing_price_Analysis12")
 
 # -----------------------------
 # S3 Config
