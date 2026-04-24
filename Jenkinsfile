@@ -200,8 +200,7 @@ pipeline {
         ACCOUNT_ID = "440977420038"
         ECR_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         FULL_IMAGE_NAME = "${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}"
-        ML_EC2 = "ec2-user@100.27.209.28"
-        // MONITOR_EC2 = "ec2-user@<MONITOR_EC2_IP>"
+        ML_EC2 = "ubuntu@100.27.209.28"   // ✅ FIXED USER
     }
 
     stages {
@@ -220,7 +219,7 @@ pipeline {
             }
         }
 
-        stage('Login to AWS ECR') {
+        stage('Login to AWS ECR (Jenkins)') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                 credentialsId: 'aws-credentials']]) {
@@ -238,52 +237,36 @@ pipeline {
             }
         }
 
-        // 🔥 Deploy ML App to EC2-1
-        stage('Deploy ML App (EC2-1)') {
+        // 🔥 Deploy ML App to EC2
+        stage('Deploy ML App (EC2)') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh -o StrictHostKeyChecking=no ${ML_EC2} "
-                        docker pull ${FULL_IMAGE_NAME} &&
-                        docker rm -f usa-container || true &&
-                        docker network inspect monitoring-network >/dev/null 2>&1 || docker network create monitoring-network &&
+
+                        echo '🚀 Logging into ECR on EC2...'
+
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin ${ECR_URI}
+
+                        echo '📥 Pulling latest image...'
+                        docker pull ${FULL_IMAGE_NAME}
+
+                        echo '🧹 Removing old container...'
+                        docker rm -f usa-container || true
+
+                        echo '🌐 Creating network if not exists...'
+                        docker network inspect monitoring-network >/dev/null 2>&1 || \
+                        docker network create monitoring-network
+
+                        echo '🚀 Starting new container...'
                         docker run -d \
                           --name usa-container \
                           --network monitoring-network \
                           -p 8000:8000 \
                           ${FULL_IMAGE_NAME}
-                    "
-                    '''
-                }
-            }
-        }
 
-        // 🔥 Deploy Monitoring Stack to EC2-2
-        stage('Deploy Monitoring (EC2-2)') {
-            steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ${MONITOR_EC2} "
-                        docker rm -f node-exporter prometheus grafana || true &&
-                        docker network inspect monitoring-network >/dev/null 2>&1 || docker network create monitoring-network &&
-
-                        docker run -d \
-                          --name node-exporter \
-                          --network monitoring-network \
-                          -p 9100:9100 \
-                          prom/node-exporter &&
-
-                        docker run -d \
-                          --name prometheus \
-                          --network monitoring-network \
-                          -p 9090:9090 \
-                          prom/prometheus &&
-
-                        docker run -d \
-                          --name grafana \
-                          --network monitoring-network \
-                          -p 3000:3000 \
-                          grafana/grafana
+                        echo '✅ Deployment completed successfully'
                     "
                     '''
                 }
@@ -300,12 +283,6 @@ pipeline {
         }
     }
 }
-
-
-
-
-
-
 
 
 
