@@ -200,7 +200,8 @@ pipeline {
         ACCOUNT_ID = "440977420038"
         ECR_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         FULL_IMAGE_NAME = "${ECR_URI}/${ECR_REPO}:${IMAGE_TAG}"
-        EC2_HOST = "ubuntu@100.27.209.28"
+        EC2_HOSTS = "ubuntu@100.27.209.28,ubuntu@107.22.130.253"
+}
     }
 
     stages {
@@ -219,7 +220,7 @@ pipeline {
                sshagent(['ec2-key']) {
                    sh '''
                    echo "📁 Creating directory on EC2..."
-                   ssh -o StrictHostKeyChecking=no ${EC2_HOST} "rm -rf /home/ubuntu/USA_Housing && mkdir -p /home/ubuntu/USA_Housing"
+                   ssh -o StrictHostKeyChecking=no ${EC2_HOSTS} "rm -rf /home/ubuntu/USA_Housing && mkdir -p /home/ubuntu/USA_Housing"
 
                    echo "📦 Copying files to EC2..."
                    scp -o StrictHostKeyChecking=no -r * ${EC2_HOST}:/home/ubuntu/USA_Housing/
@@ -233,7 +234,7 @@ pipeline {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh ${EC2_HOST} "
+                    ssh ${EC2_HOSTS} "
                         cd ~/USA_Housing
 
                         echo '📦 Installing dependencies...'
@@ -292,7 +293,7 @@ pipeline {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh ${EC2_HOST} "
+                    ssh ${EC2_HOSTS} "
                         echo '🚀 Logging into ECR...'
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         sudo docker login --username AWS --password-stdin ${ECR_URI}
@@ -324,7 +325,7 @@ pipeline {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh ${EC2_HOST} "
+                    ssh ${EC2_HOSTS} "
                         echo '📊 Deploying monitoring...'
 
                         sudo docker rm -f node-exporter prometheus grafana || true
