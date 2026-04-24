@@ -218,8 +218,8 @@ pipeline {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh -o StrictHostKeyChecking=no ${EC2_HOST} "rm -rf USA_Housing || true"
-                    scp -o StrictHostKeyChecking=no -r * ${EC2_HOST}:~/USA_Housing
+                    ssh ${EC2_HOST} "rm -rf ~/USA_Housing && mkdir ~/USA_Housing"
+                    scp -r . ${EC2_HOST}:~/USA_Housing
                     '''
                 }
             }
