@@ -398,7 +398,7 @@ pipeline {
                         sshagent(['ec2-key']) {
                             sh """
                             echo "📁 Setting up directory on ${host}"
-                            ssh -o StrictHostKeyChecking=no ${host} "rm -rf ~/USA_Housing && mkdir -p ~/USA_Housing"
+                            ssh -o StrictHostKeyChecking=no ${host} 'rm -rf ~/USA_Housing && mkdir -p ~/USA_Housing'
 
                             echo "📦 Copying files to ${host}"
                             scp -o StrictHostKeyChecking=no -r * ${host}:~/USA_Housing/
@@ -418,28 +418,29 @@ pipeline {
                     for (host in hosts) {
                         sshagent(['ec2-key']) {
                             sh """
-                            ssh ${host} "
+                            echo "🚀 Training on ${host}"
+
+                            ssh -o StrictHostKeyChecking=no ${host} '
                                 cd ~/USA_Housing
 
-                                echo '📦 Installing dependencies...'
                                 sudo apt update -y
                                 sudo apt install -y python3-pip awscli
 
                                 sudo pip3 install -r requirements.txt
 
-                                echo '🔍 Checking model in S3...'
+                                echo "🔍 Checking model in S3..."
                                 aws s3 ls s3://usa-ml-app1/models/latest/model.pkl >/dev/null 2>&1
 
-                                if [ \\$? -eq 0 ]; then
-                                    echo '✅ Model exists. Skipping training.'
+                                if [ \$? -eq 0 ]; then
+                                    echo "✅ Model exists. Skipping training."
                                 else
-                                    echo '🚀 Training model...'
+                                    echo "🚀 Training model..."
                                     python3 train.py
 
-                                    echo '📦 Uploading model...'
+                                    echo "📦 Uploading model..."
                                     aws s3 cp model.pkl s3://usa-ml-app1/models/latest/model.pkl
                                 fi
-                            "
+                            '
                             """
                         }
                     }
@@ -483,28 +484,30 @@ pipeline {
                     for (host in hosts) {
                         sshagent(['ec2-key']) {
                             sh """
-                            ssh ${host} "
-                                echo '🚀 Logging into ECR...'
+                            echo "🚀 Deploying on ${host}"
+
+                            ssh -o StrictHostKeyChecking=no ${host} '
+                                echo "🔐 Login to ECR"
                                 aws ecr get-login-password --region ${AWS_REGION} | \
                                 sudo docker login --username AWS --password-stdin ${ECR_URI}
 
-                                echo '📥 Pulling image...'
+                                echo "📥 Pull image"
                                 sudo docker pull ${FULL_IMAGE_NAME}
 
-                                echo '🧹 Removing old container...'
+                                echo "🧹 Remove old container"
                                 sudo docker rm -f usa-container || true
 
-                                echo '🌐 Creating network...'
+                                echo "🌐 Create network"
                                 sudo docker network inspect monitoring-network >/dev/null 2>&1 || \
                                 sudo docker network create monitoring-network
 
-                                echo '🚀 Starting container...'
+                                echo "🚀 Run container"
                                 sudo docker run -d \
                                   --name usa-container \
                                   --network monitoring-network \
                                   -p 8000:8000 \
                                   ${FULL_IMAGE_NAME}
-                            "
+                            '
                             """
                         }
                     }
@@ -521,9 +524,9 @@ pipeline {
                     for (host in hosts) {
                         sshagent(['ec2-key']) {
                             sh """
-                            ssh ${host} "
-                                echo '📊 Deploying monitoring...'
+                            echo "📊 Monitoring setup on ${host}"
 
+                            ssh -o StrictHostKeyChecking=no ${host} '
                                 sudo docker rm -f node-exporter prometheus grafana || true
 
                                 sudo docker run -d \
@@ -544,7 +547,7 @@ pipeline {
                                   --network monitoring-network \
                                   -p 3000:3000 \
                                   grafana/grafana
-                            "
+                            '
                             """
                         }
                     }
@@ -557,6 +560,11 @@ pipeline {
         success {
             echo "✅ Deployment Successful 🚀"
         }
+        failure {
+            echo "❌ Pipeline Failed"
+        }
+    }
+}
         failure {
             echo "❌ Pipeline Failed"
         }
