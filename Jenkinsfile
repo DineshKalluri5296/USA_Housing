@@ -213,31 +213,43 @@ pipeline {
             }
         }
 
-        // 🔥 Copy code to EC2
+        // ✅ Better Copy (Reliable)
         stage('Copy Code to EC2') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh ${EC2_HOST} "rm -rf ~/USA_Housing && mkdir ~/USA_Housing"
-                    scp -r . ${EC2_HOST}:~/USA_Housing
+                    echo "🧹 Cleaning EC2 folder..."
+                    ssh -o StrictHostKeyChecking=no ${EC2_HOST} "
+                        rm -rf ~/USA_Housing && mkdir -p ~/USA_Housing
+                    "
+
+                    echo "📦 Copying project..."
+                    rsync -avz --delete \
+                        --exclude='.git' \
+                        --exclude='__pycache__' \
+                        --exclude='.venv' \
+                        -e "ssh -o StrictHostKeyChecking=no" \
+                        ./ ${EC2_HOST}:~/USA_Housing/
+
+                    echo "✅ Copy completed"
                     '''
                 }
             }
         }
 
-        // 🔥 Train Model on EC2
+        // ✅ Train on EC2 (Fixed)
         stage('Train Model on EC2') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh ${EC2_HOST} "
-                        cd USA_Housing
+                        cd ~/USA_Housing
 
                         echo '📦 Installing dependencies...'
                         sudo apt update -y
-                        sudo apt install -y python3-pip
+                        sudo apt install -y python3-pip awscli
 
-                        pip3 install --user -r requirements.txt
+                        sudo pip3 install -r requirements.txt
 
                         echo '🔍 Checking model in S3...'
                         aws s3 ls s3://usa-ml-app1/models/latest/model.pkl >/dev/null 2>&1
@@ -248,7 +260,7 @@ pipeline {
                             echo '🚀 Training model...'
                             python3 train.py
 
-                            echo '📦 Uploading model to S3...'
+                            echo '📦 Uploading model...'
                             aws s3 cp model.pkl s3://usa-ml-app1/models/latest/model.pkl
                         fi
                     "
@@ -257,14 +269,15 @@ pipeline {
             }
         }
 
-        // 🔥 Build on Jenkins
+        // ✅ Build Image
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${FULL_IMAGE_NAME} .'
             }
         }
 
-        stage('Login to AWS ECR (Jenkins)') {
+        // ✅ Login ECR
+        stage('Login to AWS ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                 credentialsId: 'aws-credentials']]) {
@@ -276,21 +289,19 @@ pipeline {
             }
         }
 
+        // ✅ Push Image
         stage('Push Image to ECR') {
             steps {
                 sh 'docker push ${FULL_IMAGE_NAME}'
             }
         }
 
-        // 🔥 Deploy on EC2
+        // ✅ Deploy App
         stage('Deploy on EC2') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh ${EC2_HOST} "
-                        echo '🐳 Fix Docker permissions...'
-                        sudo usermod -aG docker ubuntu || true
-
                         echo '🚀 Logging into ECR...'
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         sudo docker login --username AWS --password-stdin ${ECR_URI}
@@ -317,13 +328,13 @@ pipeline {
             }
         }
 
-        // 🔥 Monitoring on same EC2
+        // ✅ Monitoring (Fixed Prometheus)
         stage('Deploy Monitoring (EC2)') {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
                     ssh ${EC2_HOST} "
-                        echo '📊 Deploying monitoring stack...'
+                        echo '📊 Deploying monitoring...'
 
                         sudo docker rm -f node-exporter prometheus grafana || true
 
@@ -337,6 +348,7 @@ pipeline {
                           --name prometheus \
                           --network monitoring-network \
                           -p 9090:9090 \
+                          -v ~/USA_Housing/prometheus.yml:/etc/prometheus/prometheus.yml \
                           prom/prometheus
 
                         sudo docker run -d \
@@ -360,6 +372,5 @@ pipeline {
         }
     }
 }
-
 
 
