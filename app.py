@@ -49,7 +49,7 @@ mlflow.set_experiment("USA_Housing_price_Analysis12")
 # -----------------------------
 # S3 Config
 # -----------------------------
-BUCKET_NAME = "usa-ml-app1"
+BUCKET_NAME = "usa-ml-app11"
 MODEL_KEY = "models/latest/model.pkl"
 LOCAL_MODEL_PATH = "model.pkl"
 
